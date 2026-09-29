@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#171817">
+    <meta name="description" content="Ask handbooks, policies, and guidelines questions. Get answers with page-level sources you can inspect.">
+    <title>DocLore — Ask your documents</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Paytone+One&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v=landing-3">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/click-effects.css') }}?v=1">
+</head>
+<body class="landing-page">
+    <header class="landing-nav">
+        <nav class="landing-links" aria-label="Main navigation">
+            <a href="#features">Features</a>
+            <a href="#how">How it works</a>
+            <a href="#pricing">Pricing</a>
+            <a href="#docs">Docs</a>
+        </nav>
+        <div class="landing-nav-actions">
+            <button class="sound-toggle" type="button" aria-label="Mute website sounds" aria-pressed="false" title="Mute website sounds">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 9v6h4l5 4V5L8 9H4Z"></path><path class="sound-waves" d="M16 9a5 5 0 0 1 0 6m2.5-8.5a8.5 8.5 0 0 1 0 11"></path><path class="sound-slash" d="m16 9 5 6m0-6-5 6"></path></svg>
+            </button>
+            <button class="nav-login" type="button" data-auth-mode="login">Log in</button>
+            <button class="nav-signup" type="button" data-auth-mode="signup">Sign up</button>
+            <button class="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme">◐</button>
+        </div>
+        <button class="mobile-menu" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+    </header>
+
+    <main id="top">
+        <section class="hero-section">
+            <a class="hero-brand" href="#top" aria-label="DocLore home">
+                <img src="{{ url_for('static', filename='images/Doclore logo badge.png') }}" alt="" aria-hidden="true">
+                <span class="hero-brand-copy"><span>DocLore</span><small>Docs that talk back.</small></span>
+            </a>
+            <div class="hero-copy reveal">
+                <span class="eyebrow-pill"><i></i> Now with confidence scoring</span>
+                <h1>Stop searching.<br>Start asking your documents.</h1>
+                <p class="hero-lede">Upload a handbook, policy, or guideline. Get clear answers with sources you can check, in seconds.</p>
+                <div class="hero-actions">
+                    <a class="button-primary" href="#signup">Get started free <span aria-hidden="true">↗</span></a>
+                    <a class="button-secondary" href="#demo">See a demo <span aria-hidden="true">↓</span></a>
+                </div>
+                <p class="hero-note">Built for students, teams, and anyone who works with long documents.</p>
+            </div>
+            <div class="hero-visual reveal" aria-label="Preview of a question answered from a document">
+                <div class="visual-glow"></div>
+                <div class="mock-window">
+                    <div class="mock-window-bar"><span class="mock-dot"></span><span class="mock-dot"></span><span class="mock-dot"></span><span class="mock-file">Student Handbook 2025.pdf</span><span class="mock-status">Indexed</span></div>
+                    <div class="mock-body">
+                        <div class="mock-message user-message"><span class="mock-avatar">Y</span><div><small>You · 10:42</small><p>How many days do I have to appeal a decision?</p></div></div>
+                        <div class="mock-message assistant-message"><span class="mock-avatar assistant-mark">✳</span><div><small>DocLore · Answer</small><p>You may submit an appeal within <mark>10 working days</mark> of receiving the decision.</p><div class="mock-citation"><span>↗</span> Student Handbook · page 18 <b>Confidence 94%</b></div></div></div>
+                        <div class="mock-prompt"><span>Ask your document…</span><button type="button" tabindex="-1">Send</button></div>
+                    </div>
+                </div>
+                <div class="float-chip chip-source"><span>↗</span> Page-level sources</div>
+                <div class="float-chip chip-ground"><span>✓</span> Grounded in your PDF</div>
+            </div>
+        </section>
+
+        <section class="proof-strip reveal" aria-label="Product highlights">
+            <div><strong>PDF-first</strong><span>Works with your documents</span></div>
+            <div><strong>Page-level</strong><span>Follow answers to the source</span></div>
+            <div><strong>Transparent</strong><span>See retrieval and answer signals</span></div>
+            <div><strong>Made to verify</strong><span>Read the passage for yourself</span></div>
+        </section>
+
+        <section class="section-block feature-section" id="features">
+            <div class="section-intro reveal"><span class="section-kicker">Why DocLore</span><h2>Answers with receipts.</h2><p>Move from a question to the passage that answers it, without digging through a whole PDF.</p></div>
+            <div class="feature-grid">
+                <article class="feature-card reveal"><span class="feature-icon">↗</span><h3>Page-level citations</h3><p>Each answer points to retrieved passages and the pages they came from.</p><a href="#demo">See it in the demo <span>↗</span></a></article>
+                <article class="feature-card reveal"><span class="feature-icon">◉</span><h3>Confidence signals</h3><p>Review retrieval relevance and a grounding estimate alongside response timings.</p><a href="#demo">See it in the demo <span>↗</span></a></article>
+                <article class="feature-card reveal"><span class="feature-icon">⌕</span><h3>Ask in plain language</h3><p>Use everyday questions instead of trying to guess the right search terms.</p><a href="#how">How it works <span>↗</span></a></article>
+            </div>
+        </section>
+
+        <section class="section-block how-section" id="how">
+            <div class="section-intro reveal"><span class="section-kicker">A shorter route to the answer</span><h2>From PDF to understood.</h2></div>
+            <div class="steps-grid">
+                <article class="step-card reveal"><span class="step-number">01</span><div class="step-icon">⇧</div><h3>Upload your PDF</h3><p>Add a handbook, policy, or set of guidelines.</p></article>
+                <article class="step-card reveal"><span class="step-number">02</span><div class="step-icon">⌕</div><h3>Ask a question</h3><p>Write what you need to know in your own words.</p></article>
+                <article class="step-card reveal"><span class="step-number">03</span><div class="step-icon">✳</div><h3>Get a cited answer</h3><p>Review the answer, passage citations, and confidence signals.</p></article>
+            </div>
+        </section>
+
+        <section class="section-block demo-section" id="demo">
+            <div class="section-intro reveal"><span class="section-kicker">Try the experience</span><h2>Ask. Check. Feel sure.</h2><p>This interactive preview uses sample handbook answers. Your workspace answers from the PDFs you upload.</p></div>
+            <div class="demo-shell reveal">
+                <div class="demo-top"><span class="demo-file-icon">PDF</span><div><strong>Campus Handbook</strong><small>Interactive sample</small></div><span class="demo-ready">Ready</span></div>
+                <div class="demo-thread" id="demoThread" aria-live="polite">
+                    <div class="demo-message demo-user"><span class="demo-avatar">Y</span><div><small>You</small><p>What is the deadline to appeal an academic decision?</p></div></div>
+                    <div class="demo-message demo-assistant"><span class="demo-avatar">✳</span><div><small>DocLore</small><p>Appeals must be submitted within <mark>10 working days</mark> after you receive the decision.</p><button type="button" class="demo-source"><span>↗</span> Academic Appeals · Page 18</button><div class="demo-metrics"><span>Retrieval <b>82 ms</b></span><span>Generation <b>1.24 s</b></span><span>Grounding <b>91%</b></span></div></div></div>
+                </div>
+                <form class="demo-composer" id="demoForm"><input id="demoInput" type="text" maxlength="180" placeholder="Try asking about attendance…" aria-label="Try the sample chat"><button type="submit">Ask <span>↗</span></button></form>
+                <p class="demo-disclaimer">Preview answers are examples and do not query an uploaded document.</p>
+            </div>
+        </section>
+
+        <section class="section-block usecase-section" id="usecases">
+            <div class="section-intro reveal"><span class="section-kicker">Made for long, important documents</span><h2>One workspace. Many use cases.</h2></div>
+            <div class="usecase-tabs reveal" role="tablist" aria-label="Use cases">
+                <button id="tab-university" type="button" role="tab" aria-selected="true" aria-controls="usecasePanel">University handbooks</button>
+                <button id="tab-compliance" type="button" role="tab" aria-selected="false" aria-controls="usecasePanel">Compliance policies</button>
+                <button id="tab-grants" type="button" role="tab" aria-selected="false" aria-controls="usecasePanel">Grant guidelines</button>
+            </div>
+            <article class="usecase-panel reveal" id="usecasePanel" role="tabpanel" aria-labelledby="tab-university">
+                <div><span class="usecase-mark">01 / UNIVERSITY</span><h3>Help students find the rule, not just the PDF.</h3><p class="usecase-panel-copy">Ask about appeals, attendance, course requirements, or campus policies and check the cited handbook page.</p><a href="#signup">Explore the workspace <span>↗</span></a></div>
+                <div class="usecase-quote"><span>Example question</span><p id="usecaseQuestion">“What is the deadline to appeal an academic decision?”</p><span class="quote-source">Answer linked to page 18</span></div>
+            </article>
+        </section>
+
+        <section class="story-band reveal" id="docs"><div class="story-mark">✳</div><div><span class="section-kicker">Why we built it</span><h2>Important answers shouldn’t be buried on page 47.</h2><p>DocLore started with a simple idea: long documents are easier to trust when answers show their work.</p></div><a href="#how" class="text-link">How it works <span>↗</span></a></section>
+
+        <section class="pricing-band reveal" id="pricing"><div><span class="section-kicker">Simple to try</span><h2>Free for the demo.</h2><p>Start with a PDF and explore document-grounded answers in the workspace.</p></div><a class="button-primary" href="#signup">Get started free <span aria-hidden="true">↗</span></a></section>
+
+        <section class="signup-section" id="signup">
+            <div class="signup-copy reveal"><span class="section-kicker">Your documents, ready when you are</span><h2>Make room for better questions.</h2><p>Create an account to start exploring your handbooks and policies with cited answers.</p><div class="signup-points"><span>✓ Upload a PDF</span><span>✓ Ask in plain language</span><span>✓ Check every source</span></div></div>
+            <div class="auth-card reveal" id="authCard">
+                <div class="auth-heading"><h2 id="authTitle">Create your account</h2><p id="authSubtitle">Start asking your documents in minutes.</p></div>
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}<div class="auth-flashes">{% for category, message in messages %}<p class="auth-flash {{ category }}">{{ message }}</p>{% endfor %}</div>{% endif %}
+                {% endwith %}
+                <form id="signupForm" class="auth-form" method="post" action="{{ url_for('signup') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <label for="signupEmail">Email address</label><input id="signupEmail" name="email" type="email" autocomplete="email" placeholder="name@example.com" required maxlength="254">
+                    <label for="signupPassword">Password</label><input id="signupPassword" name="password" type="password" autocomplete="new-password" placeholder="At least 8 characters" minlength="8" required>
+                    <button type="submit" class="auth-submit">Sign up</button>
+                </form>
+                <form id="loginForm" class="auth-form hidden" method="post" action="{{ url_for('login') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <label for="loginEmail">Email address</label><input id="loginEmail" name="email" type="email" autocomplete="email" placeholder="name@example.com" required maxlength="254">
+                    <label for="loginPassword">Password</label><input id="loginPassword" name="password" type="password" autocomplete="current-password" placeholder="Your password" required>
+                    <button type="submit" class="auth-submit">Log in</button>
+                </form>
+                <div class="auth-divider"><span>or</span></div>
+                <a class="google-signin" href="{{ url_for('google_login') }}"><span class="google-g" aria-hidden="true">G</span>Continue with Google</a>
+                <details class="resend-details"><summary>Resend verification email</summary>
+                    <form class="resend-form" method="post" action="{{ url_for('resend_verification') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <label for="resendEmail">Email address</label>
+                        <input id="resendEmail" name="email" type="email" autocomplete="email" placeholder="name@example.com" required maxlength="254">
+                        <button type="submit">Send a new link</button>
+                    </form>
+                </details>
+                <p class="auth-switch"><span id="authSwitchText">Already have an account?</span> <button id="authSwitch" type="button" data-auth-mode="login">Log in</button></p>
+                <p class="auth-legal">By continuing, you agree to use DocLore responsibly and keep your account secure.</p>
+            </div>
+        </section>
+    </main>
+    <footer class="landing-footer"><a class="landing-brand" href="#top"><span class="brand-symbol" aria-hidden="true">▰</span>DocLore</a><span>Answers with sources you can inspect.</span><div><a href="#features">Features</a><a href="#how">How it works</a><a href="#signup">Account</a><a href="#docs">Our story</a></div><small>© {{ current_year }} DocLore</small></footer>
+    <audio id="uiClickSound" src="{{ url_for('static', filename='audio/click.wav') }}" preload="auto" hidden></audio>
+    <script src="{{ url_for('static', filename='js/click-animation.js') }}?v=1" defer></script>
+    <script src="{{ url_for('static', filename='js/click-sound.js') }}?v=1" defer></script>
+    <script src="{{ url_for('static', filename='js/sound-toggle.js') }}?v=1" defer></script>
+    <script src="{{ url_for('static', filename='js/landing.js') }}?v=landing-2" defer></script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+body {
+    --click-effect-color: var(--ring, var(--teal, #527d5e));
+    --click-effect-soft: var(--card, var(--panel, #f7f1dc));
+    cursor: url("../icons/doclore-cursor.svg") 5 3, auto;
+}
+body.landing-page {
+    --click-effect-color: oklch(0.39 0.055 55);
+    --click-effect-soft: oklch(0.973 0.027 99);
+}
+a, button, select, summary, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"], input[type="file"] {
+    cursor: url("../icons/doclore-cursor.svg") 5 3, pointer !important;
+}
+input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]), textarea {
+    cursor: text !important;
+}
+button:disabled, [aria-disabled="true"] { cursor: not-allowed !important; }
+[contenteditable="true"] { cursor: text !important; }
+.sound-toggle { display: grid; place-items: center; padding: 0; }
+.sound-toggle svg { display: block; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.sound-toggle .sound-slash { display: none; }
+.sound-toggle.is-muted .sound-waves { display: none; }
+.sound-toggle.is-muted .sound-slash { display: block; }
+body.landing-page .sound-toggle { width: 36px; height: 36px; border: 1px solid var(--land-line); border-radius: 9px; background: transparent; color: var(--land-text); }
+body.landing-page .sound-toggle:hover { border-color: var(--land-accent); background: var(--land-accent-soft); }
+.click-burst {
+    position: fixed;
+    z-index: 10000;
+    top: 0;
+    left: 0;
+    width: 1px;
+    height: 1px;
+    pointer-events: none;
+    animation: click-burst-life .46s ease-out both;
+}
+.click-burst::before {
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--click-effect-color);
+    border-radius: 50%;
+    content: "";
+    animation: click-ring .46s ease-out both;
+}
+.click-burst i {
+    position: absolute;
+    top: -5px;
+    left: -1.5px;
+    width: 3px;
+    height: 7px;
+    border-radius: 4px;
+    background: var(--click-effect-color);
+    transform-origin: 50% 5px;
+    animation: click-ray .42s cubic-bezier(.2,.7,.3,1) both;
+}
+.click-burst i:nth-child(even) {
+    width: 4px;
+    height: 4px;
+    top: -3px;
+    left: -2px;
+    border-radius: 50%;
+    background: var(--click-effect-soft);
+    transform-origin: 50% 3px;
+}
+@keyframes click-burst-life { to { opacity: 0; } }
+@keyframes click-ring { 0% { opacity: .9; transform: scale(.2); } 100% { opacity: 0; transform: scale(1.8); } }
+@keyframes click-ray { 0% { opacity: 0; transform: rotate(var(--spark-angle)) translateY(-7px) scale(.4); } 25% { opacity: 1; } 100% { opacity: 0; transform: rotate(var(--spark-angle)) translateY(-20px) scale(.8); } }
+@media (prefers-reduced-motion: reduce) { .click-burst, .click-burst::before, .click-burst i { animation-duration: .01ms !important; } }

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#171817">
+    <title>Profile settings · DocLore</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=debugged-selector-1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}?v=profile-2">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/click-effects.css') }}?v=1">
+</head>
+<body class="profile-page {{ 'light-theme' if profile.theme == 'light' else '' }}">
+    <header class="profile-topbar">
+        <a class="profile-back" href="{{ url_for('workspace') }}" aria-label="Back to workspace">← <span>Back to workspace</span></a>
+        <h1>Profile settings</h1>
+        <span class="profile-updated">{% if profile.updated_at %}Updated {{ profile.updated_at[:16].replace('T', ' ') }}{% else %}Member since {{ profile.created_at[:10] }}{% endif %}</span>
+    </header>
+
+    <main class="profile-main">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}<div class="profile-flashes" aria-live="polite">{% for category, message in messages %}<p class="auth-flash {{ category }}">{{ message }}</p>{% endfor %}</div>{% endif %}
+        {% endwith %}
+
+        <section class="profile-identity" aria-label="Your profile preview">
+            <div class="profile-identity-avatar" id="identityAvatar">{{ profile.avatar }}</div>
+            <div class="profile-identity-copy"><h2 id="identityName">{{ profile.display_name }}</h2><p>{{ profile.email }}</p><span>{{ profile.role }}</span></div>
+            <div class="member-since"><span>MEMBER SINCE</span><strong>{{ profile.created_at[:10] }}</strong></div>
+        </section>
+
+        <form class="profile-form" id="profileForm" method="post" action="{{ url_for('profile_settings') }}" data-user-id="{{ profile.id }}" data-csrf-token="{{ csrf_token }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="avatar" id="selectedAvatar" value="{{ profile.avatar }}">
+
+            <section class="profile-section avatar-section">
+                <div class="profile-section-heading"><div><span class="profile-kicker">Make it yours</span><h2>Choose an avatar</h2></div><span class="section-hint">Pick one from the collection</span></div>
+                <div class="avatar-grid" role="group" aria-label="Choose an avatar">
+                    {% for avatar in profile_avatars %}
+                    <button class="avatar-choice {{ 'selected' if avatar == profile.avatar else '' }}" type="button" data-avatar="{{ avatar }}" aria-label="Choose {{ avatar }} avatar" aria-pressed="{{ 'true' if avatar == profile.avatar else 'false' }}">{{ avatar }}</button>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="profile-section basics-section">
+                <div class="profile-section-heading"><div><span class="profile-kicker">Account basics</span><h2>Your details</h2></div></div>
+                <div class="profile-field"><label for="displayName">Display name</label><input id="displayName" name="display_name" type="text" value="{{ profile.display_name }}" maxlength="80" autocomplete="name" required><small>This name appears in your workspace profile.</small></div>
+                <div class="profile-field"><label for="profileRole">Role</label><select id="profileRole" name="role">{% for role in profile_roles %}<option value="{{ role }}" {{ 'selected' if role == profile.role else '' }}>{{ role }}</option>{% endfor %}</select><small>Your role is for profile context; it does not change document permissions.</small></div>
+                <div class="profile-field"><label for="profileEmail">Email</label><input id="profileEmail" type="email" value="{{ profile.email }}" readonly aria-readonly="true"><small>Email is linked to your sign-in and can’t be changed here.</small></div>
+            </section>
+
+            <section class="profile-section preferences-section">
+                <div class="profile-section-heading"><div><span class="profile-kicker">Your workspace</span><h2>Preferences</h2></div></div>
+                <label class="preference-row" for="darkMode"><span><strong>Dark mode</strong><small>Use the dark workspace appearance.</small></span><input class="preference-switch" id="darkMode" name="dark_mode" type="checkbox" {{ 'checked' if profile.theme == 'dark' else '' }}><i aria-hidden="true"></i></label>
+                <label class="preference-row" for="emailNotifications"><span><strong>Email notifications</strong><small>Save your preference for future handbook update notices.</small></span><input class="preference-switch" id="emailNotifications" name="email_notifications" type="checkbox" {{ 'checked' if profile.email_notifications else '' }}><i aria-hidden="true"></i></label>
+            </section>
+
+            <div class="profile-save-row"><span class="profile-save-note" id="profileSaveNote">Changes are saved to your account.</span><button class="profile-save" type="submit">Save changes</button></div>
+        </form>
+    </main>
+    <audio id="uiClickSound" src="{{ url_for('static', filename='audio/click.wav') }}" preload="auto" hidden></audio>
+    <script src="{{ url_for('static', filename='js/click-animation.js') }}?v=1" defer></script>
+    <script src="{{ url_for('static', filename='js/click-sound.js') }}?v=1" defer></script>
+    <script src="{{ url_for('static', filename='js/sound-toggle.js') }}?v=1" defer></script>
+    <script src="{{ url_for('static', filename='js/profile.js') }}?v=profile-2" defer></script>
+</body>
+</html>

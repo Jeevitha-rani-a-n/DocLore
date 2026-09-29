@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1020">
+    <title>DocLore</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}?v=frontend-2">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}?v=profile-1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/click-effects.css') }}?v=1">
+</head>
+<body class="{{ 'light-theme' if profile.theme == 'light' else '' }}" data-user-id="{{ user_id }}" data-user-email="{{ user_email }}" data-profile-theme="{{ profile.theme }}" data-csrf-token="{{ csrf_token }}">
+    <header class="topbar">
+        <a class="brand" href="/" aria-label="DocLore home">
+            <img class="workspace-header-logo" src="{{ url_for('static', filename='images/Doclore logo badge.png') }}" alt="" aria-hidden="true">
+            <span class="workspace-brand-copy"><span>DocLore</span><small>Docs that talk back.</small></span>
+        </a>
+        <div class="top-actions">
+            <button class="button button-share" id="shareBtn" type="button"><span aria-hidden="true">↗</span> Share</button>
+            <button class="icon-button sound-toggle" type="button" aria-label="Mute website sounds" aria-pressed="false" title="Mute website sounds">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 9v6h4l5 4V5L8 9H4Z"></path><path class="sound-waves" d="M16 9a5 5 0 0 1 0 6m2.5-8.5a8.5 8.5 0 0 1 0 11"></path><path class="sound-slash" d="m16 9 5 6m0-6-5 6"></path></svg>
+            </button>
+            <div class="profile-menu">
+                <button class="profile-button" id="profileBtn" type="button" aria-label="Open account menu" aria-controls="profileDropdown" aria-expanded="false" title="Account menu">{{ profile.avatar }}</button>
+                <div class="profile-dropdown" id="profileDropdown" hidden>
+                    <span class="profile-name">{{ profile.display_name }}</span>
+                    <span class="profile-email">{{ user_email }}</span>
+                    <a class="button profile-link" href="{{ url_for('profile_settings') }}">Profile</a>
+                    <form class="logout-form" action="{{ url_for('logout') }}" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button" type="submit">Log out</button></form>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="workspace-grid">
+        <aside class="panel sidebar" aria-label="Workspace navigation">
+            <section class="sidebar-section filter-section">
+                <div class="section-heading"><h2>Conversation history</h2><span class="live-dot" title="Saved in this browser"></span></div>
+                <label class="search-box"><span aria-hidden="true">⌕</span><input id="historySearch" type="search" placeholder="Search conversations…" aria-label="Search conversations"></label>
+                <label class="select-label" for="handbookFilter">Filter by handbook</label>
+                <select id="handbookFilter" aria-label="Filter by handbook"><option value="all">All handbooks</option></select>
+            </section>
+
+            <section class="sidebar-section conversation-section">
+                <div class="section-heading"><h2>Active conversations</h2><span class="muted-label" id="conversationCount">0</span></div>
+                <div id="activeConversations" class="conversation-list"></div>
+            </section>
+
+            <section class="sidebar-section handbook-section">
+                <div class="section-heading"><h2>Quick access · handbooks</h2><span class="muted-label">Current</span></div>
+                <div id="quickHandbooks" class="quick-handbooks"><p class="sidebar-empty">Upload a PDF to add it here.</p></div>
+            </section>
+
+            <div class="sidebar-bottom-dock">
+                <section class="sidebar-section tools-section">
+                    <h2>Workspace tools</h2>
+                    <div class="tool-grid">
+                        <button class="tool-button" id="documentDetailsBtn" type="button"><img src="{{ url_for('static', filename='icons/document-details-badge.png') }}" alt="" aria-hidden="true"><small>Document details</small></button>
+                        <button class="tool-button" id="uploadManagerBtn" type="button"><img src="{{ url_for('static', filename='icons/upload-icon.png') }}" alt="" aria-hidden="true"><small>Upload PDF</small></button>
+                        <button class="tool-button" id="indexStatusBtn" type="button"><img src="{{ url_for('static', filename='icons/index-status-icon.png') }}" alt="" aria-hidden="true"><small>Index status</small></button>
+                    </div>
+                </section>
+
+                <footer class="sidebar-footer">
+                    <button class="icon-button" id="settingsBtn" type="button" aria-label="Workspace settings" title="Workspace settings">⚙</button>
+                    <button class="icon-button" id="themeBtn" type="button" aria-label="Switch color theme" title="Switch color theme">☼</button>
+                    <button class="button button-bottom-chat" id="newChatBottomBtn" type="button">New Chat <img src="{{ url_for('static', filename='icons/add-text-icon.png') }}" alt="" aria-hidden="true"></button>
+                </footer>
+            </div>
+        </aside>
+        <div class="resize-handle left-resizer" id="leftResizer" role="separator" aria-orientation="vertical" aria-label="Resize conversation sidebar" tabindex="0"></div>
+
+        <section class="panel chat-panel" aria-label="Chat workspace">
+            <div class="panel-titlebar">
+                <div><p class="eyebrow">Your document workspace</p><h1>Chatbot</h1></div>
+            </div>
+            <div id="chatBox" class="chat-feed" aria-live="polite">
+                <div class="welcome-state">
+                    <div class="welcome-icon" aria-hidden="true"></div>
+                    <p class="eyebrow">Document-grounded answers</p>
+                    <h2>Ask your handbook anything</h2>
+                    <p>Upload a PDF, then ask a question. Answers include the passages used so you can verify them against the document.</p>
+                    <div class="example-prompts">
+                        <button class="prompt-chip" type="button">Summarize this document</button>
+                        <button class="prompt-chip" type="button">What are the key points?</button>
+                        <button class="prompt-chip" type="button">Who is the author?</button>
+                    </div>
+                </div>
+            </div>
+            <form id="questionForm" class="prompt-area">
+                <label for="question">Prompt</label>
+                <div class="prompt-composer"><button id="composerUploadBtn" class="composer-upload-button" type="button" aria-label="Upload a PDF" title="Upload a PDF"></button><textarea id="question" rows="1" placeholder="Ask your document…" aria-label="Ask your document"></textarea><button id="askBtn" class="send-button" type="submit"><span>Send</span></button><div id="composerDocument" class="composer-document hidden" aria-live="polite"><span class="composer-document-icon">PDF</span><span class="composer-document-copy"><strong id="composerDocumentName"></strong><small id="composerDocumentStatus">Ready for questions</small></span></div></div>
+                <div class="composer-hint"><span id="chatStatus">Upload a handbook PDF to start asking questions.</span><button id="clearConversationBtn" type="button">Clear chat</button></div>
+            </form>
+        </section>
+        <div class="resize-handle right-resizer" id="rightResizer" role="separator" aria-orientation="vertical" aria-label="Resize document panel" tabindex="0"></div>
+
+        <aside class="panel document-panel" aria-label="Document viewer">
+            <div class="document-heading"><div><p class="eyebrow">Workspace reference</p><h2>Document window</h2></div><span id="documentReadyBadge" class="ready-badge">No document</span></div>
+            <div class="pdf-toolbar">
+                <div class="pdf-toolbar-title"><span class="pdf-icon">PDF</span><strong>PDF Viewer</strong></div>
+                <div class="pdf-controls">
+                    <label class="pdf-search"><input id="pdfSearch" type="search" placeholder="Search document" aria-label="Search PDF"><span aria-hidden="true">⌕</span></label>
+                    <div class="zoom-controls"><button id="zoomOutBtn" type="button" aria-label="Zoom out">−</button><span id="zoomValue">100%</span><button id="zoomInBtn" type="button" aria-label="Zoom in">＋</button></div>
+                    <div class="page-controls"><label for="pageNumber">Page</label><input id="pageNumber" type="number" min="1" value="1" disabled><span>/ <b id="pageCount">—</b></span></div>
+                </div>
+                <div id="documentTitle" class="document-title">No handbook uploaded</div>
+            </div>
+            <div id="pdfEmpty" class="pdf-empty"><div class="pdf-empty-icon" aria-hidden="true"></div><h3>Your document appears here</h3><p>Upload a PDF handbook to preview it while you chat.</p><button class="button button-upload-empty" id="emptyUploadBtn" type="button">Choose a PDF</button></div>
+            <iframe id="pdfFrame" class="pdf-frame hidden" title="Uploaded handbook PDF" src="about:blank"></iframe>
+            <section id="documentDetails" class="document-details hidden" aria-live="polite">
+                <div class="details-heading"><h3>Document details</h3><span class="ready-badge"><i></i> Indexed</span></div>
+                <dl><div><dt>File size</dt><dd id="docSize">—</dd></div><div><dt>Pages</dt><dd id="docPages">—</dd></div><div><dt>Text characters</dt><dd id="docCharacters">—</dd></div><div><dt>Search chunks</dt><dd id="docChunks">—</dd></div><div><dt>Indexed</dt><dd id="docUploadTime">—</dd></div></dl>
+            </section>
+        </aside>
+    </main>
+    <button class="panel-edge-toggle left-edge-toggle" id="toggleSidebarBtn" type="button" aria-label="Hide conversation history" aria-pressed="true" title="Hide conversation history"><span class="edge-toggle-icon" aria-hidden="true">‹</span></button>
+    <button class="panel-edge-toggle right-edge-toggle" id="toggleDocumentBtn" type="button" aria-label="Hide PDF viewer" aria-pressed="true" title="Hide PDF viewer"><span class="edge-toggle-icon" aria-hidden="true">›</span></button>
+    <form id="uploadForm" enctype="multipart/form-data" hidden>
+        <input type="file" name="pdf" id="pdf" accept="application/pdf,.pdf">
+    </form>
+
+    <dialog id="settingsDialog" class="settings-dialog" aria-labelledby="settingsTitle">
+        <h2 id="settingsTitle">Workspace settings</h2>
+        <p class="settings-note">Model: <strong>{{ model_name }}</strong><br>Conversations are saved in this browser only.</p>
+        <div class="settings-actions">
+            <button class="button" id="settingsTheme" type="button">Switch light / dark theme</button>
+            <button class="button" id="settingsRemoveDoc" type="button">Remove current PDF</button>
+            <button class="button danger" id="settingsClearAll" type="button">Delete all conversations</button>
+            <button class="button" id="settingsClose" type="button">Close</button>
+        </div>
+    </dialog>
+
+    <div id="toastRegion" class="toast-region" aria-live="polite"></div>
+    <audio id="uiClickSound" src="{{ url_for('static', filename='audio/click.wav') }}" preload="auto" hidden></audio>
+    <audio id="assistantReplySound" src="{{ url_for('static', filename='audio/assistant-reply.wav') }}" preload="auto" hidden></audio>
+    <script src="{{ url_for('static', filename='js/click-animation.js') }}?v=1" defer></script>
+    <script src="{{ url_for('static', filename='js/click-sound.js') }}?v=1" defer></script>
+    <script src="{{ url_for('static', filename='js/sound-toggle.js') }}?v=1" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js" defer></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}?v=chat-pop-sound-1" defer></script>
+</body>
+</html>
