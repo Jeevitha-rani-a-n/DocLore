@@ -1,292 +1,122 @@
-# 📄 RAG Document Chatbot
+# DocLore — RAG Document Chatbot
 
-> AI-powered document question answering system built with **Flask**, **FAISS**, **Sentence Transformers**, and **Groq LLM**.
+DocLore is a Flask web application for asking questions about PDF handbooks and documents. It extracts and chunks PDF text, embeds passages with Sentence Transformers, retrieves relevant passages using semantic and lexical search, reranks candidates, and asks a Groq model to write an answer grounded in those passages.
 
-Ask questions about any PDF using Retrieval-Augmented Generation (RAG). The application extracts text from uploaded documents, creates semantic embeddings, retrieves the most relevant context using FAISS, and generates accurate answers with a Large Language Model.
+## Features
 
----
-![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)
-![Flask](https://img.shields.io/badge/Flask-Web%20Framework-black?logo=flask)
-![FAISS](https://img.shields.io/badge/FAISS-Vector%20Database-orange)
-![Sentence Transformers](https://img.shields.io/badge/Sentence--Transformers-Embeddings-green)
-![Groq](https://img.shields.io/badge/Groq-LLM-purple)
-![Status](https://img.shields.io/badge/Status-Completed-success)
+- Email and password accounts with email verification through SMTP
+- Optional Google OAuth sign-in
+- User profile settings, including display name, avatar, role, and light or dark theme
+- Upload and manage a personal PDF library (up to 50 MB per file)
+- Ask questions about one saved PDF or search across all saved PDFs
+- Semantic retrieval with FAISS, BM25 term matching, spelling normalization, and cross-encoder reranking
+- Source passages, answer confidence and grounding indicators, and PDF passage highlighting
+- Persistent account and document metadata in SQLite
 
-## 🚀 Preview
+## How it works
 
-<p align="center">
-  <img src="static/images/rag-chatbot.png" width="900">
-</p>
+1. The app extracts page text from a PDF and splits it into overlapping chunks.
+2. `all-MiniLM-L6-v2` creates normalized embeddings and FAISS indexes them.
+3. A question is matched against the document using semantic and lexical retrieval; a cross-encoder reranks candidate passages.
+4. The selected context is sent to the configured Groq model, which is instructed to answer from that context and cite page labels.
 
-## 🎯 Project Objective
+## Requirements
 
-The goal of this project is to demonstrate how Retrieval-Augmented Generation (RAG) can be used to build intelligent document question-answering systems. Instead of relying solely on an LLM's general knowledge, the chatbot retrieves relevant document context using semantic search and generates grounded responses based on the uploaded PDF.
+- Python 3.10 or newer (Python 3.13 is used in the development environment)
+- A Groq API key for answer generation
+- Internet access on first run to download the embedding and reranker models
+- SMTP credentials to enable email verification; Google OAuth credentials are optional
 
+## Setup
 
-## ✨ Features
+1. Create and activate a virtual environment:
 
-- 📄 Upload and process PDF documents
-- 💬 Ask natural language questions about uploaded documents
-- 🧠 Retrieval-Augmented Generation (RAG) pipeline
-- 🔍 Semantic search using FAISS vector database
-- 🤖 AI-powered answers using Groq LLM
-- 📝 Markdown-formatted responses
-- 📚 Expandable source references for answer transparency
-- 📋 One-click copy response button
-- 🎨 Modern responsive green and cream UI
-- ⚡ Fast document retrieval with Sentence Transformers embeddings
-- 📊 Document statistics (chunks, embeddings, characters, upload time)
-- 🖱️ Drag & Drop PDF upload support
-- 🔔 Toast notifications and loading indicators
-- 📚 Multiple PDFs indexed side by side during the running app session
-- 🧭 Three-panel workspace with conversation search and PDF preview controls
-- 📄 Retrieved source passages with a PDF search shortcut
+   ```bash
+   python -m venv .venv
+   # Windows PowerShell
+   .venv\Scripts\Activate.ps1
+   # macOS/Linux: source .venv/bin/activate
+   ```
 
-Uploaded PDF indexes and conversation history are kept in application/browser memory for the current session; restarting the Flask app clears the indexes, and conversation history is not shared between browsers.
+2. Install the pinned dependencies:
 
-## 🛠️ Tech Stack
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-### Backend
-- Python 3
-- Flask
+3. Copy `.env.example` to `.env`, then configure at least:
 
-### AI / Machine Learning
-- Groq API (LLM)
-- Sentence Transformers
-- FAISS (Vector Database)
-- Retrieval-Augmented Generation (RAG)
+   ```env
+   GROQ_API_KEY=your-groq-api-key
+   GROQ_MODEL=openai/gpt-oss-120b
+   FLASK_SECRET_KEY=replace-with-a-long-random-secret
+   ```
 
-### Frontend
-- HTML5
-- CSS3
-- JavaScript
+   `GROQ_MODEL` defaults to `openai/gpt-oss-120b`. Set it to a model available to your Groq account if needed. Never commit `.env` or real credentials.
 
-### Core Libraries
-- PyPDF
-- NumPy
-- Markdown (Marked.js)
+4. Configure account providers as needed:
 
-### Development Tools
-- PyCharm
-- Git
-- GitHub
+   - For email verification, set `MAIL_SERVER`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, and `MAIL_DEFAULT_SENDER`. For Gmail, use an App Password and SMTP with TLS.
+   - For Google sign-in, set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` from a Google Cloud OAuth 2.0 Web application. Add `http://127.0.0.1:5000/auth/google/callback` as an authorized redirect URI.
 
-## 🏗️ Project Architecture
-
-```text
-                    +----------------------+
-                    |      User Uploads    |
-                    |         PDF          |
-                    +----------+-----------+
-                               |
-                               v
-                    +----------------------+
-                    |   PDF Text Extraction|
-                    +----------+-----------+
-                               |
-                               v
-                    +----------------------+
-                    |   Text Chunking      |
-                    +----------+-----------+
-                               |
-                               v
-                    +----------------------+
-                    | Sentence Transformers|
-                    |    Embeddings        |
-                    +----------+-----------+
-                               |
-                               v
-                    +----------------------+
-                    |   FAISS Vector Store |
-                    +----------+-----------+
-                               ^
-                               |
-                    User Question
-                               |
-                               v
-                    +----------------------+
-                    | Semantic Retrieval   |
-                    +----------+-----------+
-                               |
-                               v
-                    +----------------------+
-                    |     Groq LLM         |
-                    +----------+-----------+
-                               |
-                               v
-                    +----------------------+
-                    |  AI Generated Answer |
-                    | + Source References  |
-                    +----------------------+
-```
-### Workflow
-
-1. The user uploads a PDF document.
-2. Text is extracted from the PDF.
-3. The document is split into overlapping chunks.
-4. Sentence Transformers generate vector embeddings for each chunk.
-5. Embeddings are indexed using FAISS.
-6. When the user asks a question, the question is converted into an embedding.
-7. FAISS retrieves the most relevant document chunks.
-8. Retrieved context is sent to the Groq LLM.
-9. The LLM generates a grounded response along with relevant source references.
-
-## 📂 Project Structure
-
-```text
-RAG-Document-Chatbot/
-│
-├── services/
-│   ├── embedding.py         # Generate text embeddings
-│   ├── llm.py               # Groq LLM integration
-│   ├── pdf_loader.py        # Extract text from PDFs
-│   ├── retriever.py         # Retrieve relevant document chunks
-│   ├── text_splitter.py     # Split documents into chunks
-│   └── vector_store.py      # FAISS vector database
-│
-├── static/
-│   ├── css/
-│   │   └── style.css
-│   ├── js/
-│   │   ├── script.js
-│   │   └── toast.js
-│   └── images/
-│       └── rag-chatbot.png
-│
-├── templates/
-│   └── index.html
-│
-├── app.py
-├── requirements.txt
-├── .gitignore
-└── README.md
-```
-
-## ⚙️ Installation
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/HibaIsmail6/RAG-Document-Chatbot.git
-cd RAG-Document-Chatbot
-```
-
-### 2. Create a virtual environment
-
-```bash
-python -m venv .venv
-```
-
-### 3. Activate the virtual environment
-
-**Windows**
-
-```bash
-.venv\Scripts\activate
-```
-
-**macOS / Linux**
-
-```bash
-source .venv/bin/activate
-```
-
-### 4. Install dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### 5. Create a `.env` file
-
-Create a `.env` file in the project root and add your Groq API key:
-
-```env
-GROQ_API_KEY=your_api_key_here
-GROQ_MODEL=openai/gpt-oss-120b
-```
-
-`GROQ_MODEL` is optional; it defaults to `openai/gpt-oss-120b`. Set it to another model ID available to your Groq account if needed.
-## ▶️ Running the Application
-
-Start the Flask development server:
+## Run locally
 
 ```bash
 python app.py
 ```
 
-Open your browser and visit:
+Open [http://127.0.0.1:5000](http://127.0.0.1:5000), create or sign in to an account, and upload a PDF. Email/password accounts must verify their email before logging in. Google sign-in is available only when its credentials are configured.
 
+## Configuration
+
+| Variable | Purpose |
+| --- | --- |
+| `GROQ_API_KEY` | Required API key for answer generation |
+| `GROQ_MODEL` | Groq model ID; defaults to `openai/gpt-oss-120b` |
+| `GROQ_MAX_TOKENS` | Maximum completion tokens; defaults to `2048` |
+| `FLASK_SECRET_KEY` | Stable Flask session/signing key; set this in deployments |
+| `APP_DATA_DIR` | Optional persistent directory for `uploads/` and `instance/` |
+| `PUBLIC_BASE_URL` | Public app origin used to build verification links |
+| `FLASK_HTTPS_ONLY` | Set to `1` to mark session cookies secure behind HTTPS |
+| `MAIL_*` | SMTP settings for verification messages; see `.env.example` |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Enable Google OAuth sign-in |
+| `RAG_CANDIDATE_POOL` | Initial retrieval candidate count; defaults to `60` |
+| `RAG_RERANK_CANDIDATES` | Candidates passed to reranking; defaults to `40` |
+| `RAG_RERANKER_MODEL` | Cross-encoder model; set to `off` to disable reranking |
+| `RAG_MIN_SIMILARITY` | Minimum semantic similarity threshold; defaults to `0.23` |
+| `RAG_EMBED_BATCH_SIZE` | Embedding batch size; defaults to `64` |
+
+The complete example configuration is in [`.env.example`](.env.example).
+
+## Data and persistence
+
+By default, account data and document metadata are stored in `instance/accounts.sqlite3`, and uploaded PDFs are stored in `uploads/`. These paths are ignored by Git. Set `APP_DATA_DIR` to a persistent mounted directory when deploying so the database and uploaded files survive restarts or redeploys.
+
+Document metadata and PDF files persist, while FAISS indexes are held in memory and rebuilt from the saved PDF when it is queried after an app restart. The app creates its Flask secret key in the instance directory if `FLASK_SECRET_KEY` is not set; configure an explicit stable secret for deployments. Run behind an HTTPS-capable production WSGI server in production; `python app.py` starts Flask's development server.
+
+## Project layout
+
+```text
+.
+├── app.py                    # Flask routes, authentication, uploads, chat
+├── config.py                 # Project configuration
+├── requirements.txt          # Pinned Python dependencies
+├── services/
+│   ├── embedding.py          # Sentence Transformer embeddings
+│   ├── llm.py                # Groq answer generation
+│   ├── pdf_highlighter.py    # Highlight cited passages in PDFs
+│   ├── pdf_loader.py         # Page-aware PDF text extraction
+│   ├── reranker.py           # Cross-encoder reranking
+│   ├── retrieval.py          # BM25 and query normalization helpers
+│   ├── retriever.py          # Passage retrieval helpers
+│   ├── text_splitter.py      # Text chunking
+│   └── vector_store.py       # FAISS index creation and search
+├── templates/                # Landing, workspace, and profile pages
+├── static/                   # CSS, JavaScript, icons, and audio
+├── uploads/                  # Runtime PDF storage
+└── instance/                 # Runtime SQLite database and Flask key
 ```
-http://127.0.0.1:5000
-```
 
-Upload a PDF and start asking questions about its contents.
+## Retrieval notes
 
-## 💡 Usage
-
-1. Upload a PDF document.
-2. Wait for the document to be processed.
-3. Ask questions in natural language.
-4. View AI-generated answers with source references.
-5. Copy responses with one click.
-6. Upload another document anytime to start a new conversation.
-
-## 🧠 What I Learned
-
-Building this project strengthened my understanding of modern AI application development, including:
-
-- Retrieval-Augmented Generation (RAG) architecture
-- Semantic search using vector embeddings
-- FAISS vector database for efficient document retrieval
-- Sentence Transformers for text embeddings
-- Prompt engineering for LLM-based question answering
-- Flask backend development and REST APIs
-- Frontend development with HTML, CSS, and JavaScript
-- Error handling and user experience improvements
-- Git and GitHub workflow for version control
-- Writing clean, modular, and maintainable code
-
-## 🚀 Future Improvements
-
-Planned enhancements for future versions include:
-
-📄 Support DOCX documents
-
-🌍 Multiple language support
-
-📱 Mobile-friendly interface
-
-📦 Docker deployment
-
-☁️ Cloud deployment
-
-## 👩‍💻 Author
-
-**Hiba Ismail**
-
-- 🎓 Bachelor of Computer Science
-- 💻 Aspiring AI / Machine Learning Engineer
-
-### Connect with me
-
-- GitHub: https://github.com/HibaIsmail6
-- LinkedIn: www.linkedin.com/in/hiba-ismail-406958250
-
-## Email and Google sign-in setup
-
-Add the provider settings shown in `.env.example` to your existing `.env` and fill in your credentials. Keep your current settings, including `GROQ_API_KEY`.
-
-- Email verification uses SMTP. For Gmail, use `smtp.gmail.com`, port `587`, TLS, and a Google App Password in `MAIL_PASSWORD`.
-- Google sign-in uses a Google Cloud OAuth 2.0 Web application client. Add `http://127.0.0.1:5000/auth/google/callback` as an authorized redirect URI for local development, then set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
-- Set `PUBLIC_BASE_URL` to the public HTTPS origin when deployed, and set `FLASK_HTTPS_ONLY=1` for HTTPS deployments.
-- Install the updated dependencies with `pip install -r requirements.txt`.
-
-Accounts are stored in the local `instance/accounts.sqlite3` database. Passwords are hashed; email/password sign-up requires email verification before login.
-
-Uploaded PDFs are kept in `uploads/`, and their account ownership and library details are stored in `instance/accounts.sqlite3`. The library survives app restarts; the search index is rebuilt the first time a saved PDF is queried after a restart. For deployments, set `APP_DATA_DIR` to a persistent mounted directory so both the PDF files and account database survive redeploys.
-
-## RAG retrieval notes
-
-PDF extraction preserves line breaks, embeddings are generated in batches, and retrieval combines semantic search with BM25 term matching. Clear spelling errors can be corrected against the uploaded document's vocabulary. A cross-encoder reranks the strongest candidate passages; its model downloads the first time a relevant question is asked. If the model cannot be downloaded, retrieval falls back to semantic and lexical ranking. Set `RAG_RERANKER_MODEL=off` to disable reranking or adjust the candidate and batch settings in `.env`.
-
+PDF extraction preserves page labels for source references. Text is split into 900-character chunks with 160-character overlap, and embeddings are generated in batches. The cross-encoder model downloads the first time a question is reranked; if it cannot load, retrieval falls back to semantic and lexical ranking. Set `RAG_RERANKER_MODEL=off` to disable it explicitly.
