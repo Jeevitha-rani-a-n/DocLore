@@ -6,8 +6,10 @@ import sqlite3
 import secrets
 import hmac
 import math
+import json
 import smtplib
 import ssl
+import threading
 from email.message import EmailMessage
 from functools import wraps
 from io import BytesIO
@@ -82,6 +84,8 @@ PROFILE_ROLES = ["Student", "Faculty", "Staff", "Administrator", "Other"]
 
 # In-memory document library: {document_id: record}
 documents = {}
+upload_jobs = {}
+upload_jobs_lock = threading.Lock()
 
 
 def init_auth_database():
@@ -450,12 +454,16 @@ def grounding_score(answer, context):
     return round(100 * len(answer_terms & context_terms) / len(answer_terms), 1)
 
 
-def process_document(pdf_path):
+def process_document(pdf_path, progress_callback=None):
     """
     Extract text, split into chunks, create embeddings,
     and build the FAISS index.
     """
+    if progress_callback:
+        progress_callback(5, "Reading PDF")
     pages = extract_pages(pdf_path)
+    if progress_callback:
+        progress_callback(20, "Splitting document")
     text = "\n\n".join(page for page in pages if page)
     chunks = [
         f"[Page {page_number}] {chunk}"
@@ -469,9 +477,25 @@ def process_document(pdf_path):
             "No readable text found in this PDF. It may be a scanned/image-only PDF."
         )
 
-    embeddings = create_embeddings(chunks)
+    if progress_callback:
+        progress_callback(30, "Creating embeddings")
+    embeddings = create_embeddings(
+        chunks,
+        progress_callback=(
+            lambda completed, total: progress_callback(
+                30 + int(58 * completed / total),
+                "Creating embeddings",
+            )
+        ) if progress_callback else None,
+    )
+    if progress_callback:
+        progress_callback(92, "Building search index")
     index = create_vector_store(embeddings)
+    if progress_callback:
+        progress_callback(97, "Preparing search metadata")
     retrieval_metadata = build_retrieval_metadata(chunks)
+    if progress_callback:
+        progress_callback(100, "Indexing complete")
 
     return text, chunks, embeddings, index, retrieval_metadata
 
@@ -830,23 +854,57 @@ def upload_pdf():
     pdf_path = os.path.join(UPLOAD_FOLDER, stored_name)
 
     file.save(pdf_path)
+    job_id = document_id
+    with upload_jobs_lock:
+        upload_jobs[job_id] = {
+            "owner_id": session["user_id"],
+            "filename": original_name,
+            "status": "processing",
+            "progress": 0,
+            "stage": "Preparing upload",
+        }
+    worker = threading.Thread(
+        target=_process_upload_job,
+        args=(job_id, session["user_id"], original_name, stored_name, pdf_path),
+        daemon=True,
+    )
+    worker.start()
+    return jsonify({"job_id": job_id, "filename": original_name}), 202
 
+
+def _set_upload_progress(job_id, progress, stage):
+    with upload_jobs_lock:
+        job = upload_jobs.get(job_id)
+        if job and job["status"] == "processing":
+            job["progress"] = max(job["progress"], min(100, int(progress)))
+            job["stage"] = stage
+
+
+def _process_upload_job(job_id, owner_id, original_name, stored_name, pdf_path):
+    document_id = job_id
     try:
         file_size = round(os.path.getsize(pdf_path) / 1024, 2)
         page_count = len(PdfReader(pdf_path).pages)
-        text, document_chunks, embeddings, document_index, retrieval_metadata = process_document(pdf_path)
+        text, document_chunks, embeddings, document_index, retrieval_metadata = process_document(
+            pdf_path,
+            progress_callback=lambda progress, stage: _set_upload_progress(job_id, progress, stage),
+        )
     except ValueError as exc:
         _remove_quietly(pdf_path)
-        return jsonify({"error": str(exc)}), 422
+        with upload_jobs_lock:
+            upload_jobs[job_id].update({"status": "failed", "error": str(exc)})
+        return
     except Exception:
         log.exception("Failed to process PDF")
         _remove_quietly(pdf_path)
-        return jsonify({"error": "Could not process this PDF. It may be corrupted or encrypted."}), 500
+        with upload_jobs_lock:
+            upload_jobs[job_id].update({"status": "failed", "error": "Could not process this PDF. It may be corrupted or encrypted."})
+        return
 
     uploaded_at = datetime.now().strftime("%I:%M %p")
     record = {
         "id": document_id,
-        "owner_id": session["user_id"],
+        "owner_id": owner_id,
         "filename": original_name,
         "stored_name": stored_name,
         "file_size": file_size,
@@ -866,16 +924,18 @@ def upload_pdf():
                 "INSERT INTO documents "
                 "(id, owner_id, filename, stored_name, file_size, pages, characters, chunks, uploaded_at, created_at) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (document_id, session["user_id"], original_name, stored_name, file_size,
+                (document_id, owner_id, original_name, stored_name, file_size,
                  page_count, len(text), len(document_chunks), uploaded_at, datetime.now().isoformat()),
             )
     except sqlite3.Error:
         documents.pop(document_id, None)
         _remove_quietly(pdf_path)
         log.exception("Could not save uploaded PDF metadata")
-        return jsonify({"error": "The PDF was processed but could not be saved to your library."}), 500
+        with upload_jobs_lock:
+            upload_jobs[job_id].update({"status": "failed", "error": "The PDF was processed but could not be saved to your library."})
+        return
 
-    return jsonify({
+    result = {
         "message": "PDF uploaded successfully!",
         "id": document_id,
         "filename": original_name,
@@ -886,7 +946,33 @@ def upload_pdf():
         "chunks": len(document_chunks),
         "embeddings": len(embeddings),
         "uploaded_at": uploaded_at
-    }), 200
+    }
+    with upload_jobs_lock:
+        upload_jobs[job_id].update({
+            "status": "complete",
+            "progress": 100,
+            "stage": "Indexing complete",
+            "document": result,
+        })
+
+
+@app.route("/upload/status/<job_id>")
+@login_required
+def upload_status(job_id):
+    with upload_jobs_lock:
+        job = upload_jobs.get(job_id)
+        if not job or job["owner_id"] != session["user_id"]:
+            return jsonify({"error": "Upload job not found."}), 404
+        response = {
+            "status": job["status"],
+            "progress": job.get("progress", 0),
+            "stage": job.get("stage", "Indexing"),
+            "error": job.get("error"),
+            "document": job.get("document"),
+        }
+        if job["status"] in {"complete", "failed"}:
+            upload_jobs.pop(job_id, None)
+    return jsonify(response), 200
 
 
 def _remove_quietly(path):
@@ -912,6 +998,15 @@ def chat():
     ).strip()
     document_id = data.get("document_id") or data.get("documentId") or data.get("doc_id")
     all_documents = data.get("all_documents") in (True, "true", "1", 1)
+    requested_document_ids = data.get("document_ids") or data.get("documentIds") or []
+    if isinstance(requested_document_ids, str):
+        try:
+            requested_document_ids = json.loads(requested_document_ids)
+        except (TypeError, ValueError):
+            requested_document_ids = []
+    if not isinstance(requested_document_ids, list):
+        requested_document_ids = []
+    requested_document_ids = list(dict.fromkeys(str(item) for item in requested_document_ids if item))
 
     if not question:
         return jsonify({"error": "Question is required."}), 400
@@ -921,6 +1016,14 @@ def chat():
         selected_documents = user_documents(session["user_id"])
         if not selected_documents:
             return jsonify({"error": "Please upload a PDF before searching all handbooks."}), 400
+        document = None
+    elif requested_document_ids:
+        selected_documents = []
+        for requested_id in requested_document_ids:
+            handbook = get_document_record(requested_id, session["user_id"])
+            if handbook is None:
+                return jsonify({"error": "One of the selected handbooks is no longer available. Please refresh your library."}), 404
+            selected_documents.append(handbook)
         document = None
     elif document_id:
         document = get_document_record(document_id, session["user_id"])
@@ -935,7 +1038,7 @@ def chat():
 
     try:
         retrieval_started = perf_counter()
-        if all_documents:
+        if all_documents or requested_document_ids:
             document_results = []
             for handbook in selected_documents:
                 try:
@@ -978,8 +1081,29 @@ def chat():
             )
         retrieval_time_ms = round((perf_counter() - retrieval_started) * 1000, 1)
 
+        comparison_mode = bool(
+            (all_documents or requested_document_ids)
+            and len({item[1]["id"] for item in document_results if item[2]}) >= 2
+        )
         generation_started = perf_counter()
-        answer = generate_response(question, context, normalized_question=normalized_question)
+        answer = generate_response(
+            question,
+            context,
+            normalized_question=normalized_question,
+            comparison_mode=comparison_mode,
+        )
+        conflict_details = None
+        if comparison_mode:
+            conflict_heading = re.search(
+                r"(?i)Conflict detected\s*:\s*",
+                answer,
+            )
+            if conflict_heading:
+                conflict_start = answer.rfind("\n", 0, conflict_heading.start()) + 1
+                answer, conflict_details = (
+                    answer[:conflict_start].strip(),
+                    answer[conflict_heading.end():].strip(),
+                )
         generation_time_ms = round((perf_counter() - generation_started) * 1000, 1)
         grounding_score_value = grounding_score(answer, context)
     except Exception as exc:
@@ -990,6 +1114,7 @@ def chat():
 
     return jsonify({
         "answer": answer,
+        "conflict": conflict_details,
         "document_id": document["id"] if document else None,
         "sources": [chunk[:1000] + "..." for chunk in retrieved_chunks],
         "timings": {

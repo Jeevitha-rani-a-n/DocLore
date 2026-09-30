@@ -1,16 +1,30 @@
+# Local environment and credentials
+.env*
+!.env.example
+
 # Virtual Environment
 .venv/
+venv/
 
-# Python cache
+# Python cache and test artifacts
 __pycache__/
 *.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 
-# Environment variables
-.env
-
-# Upload folder
+# User documents and runtime data
 uploads/
 instance/
+*.sqlite3
+*.db
+*.log
+
+# Private keys and certificates
+*.pem
+*.key
 
 # IDE files
 .idea/

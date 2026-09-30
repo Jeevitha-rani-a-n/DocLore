@@ -25,7 +25,8 @@ body.landing-page { margin: 0; color: var(--land-text); background: var(--land-b
 .brand-symbol { color: var(--land-accent); font-size: 22px; transform: rotate(45deg); }
 .landing-links { display: flex; align-items: center; gap: clamp(24px, 4vw, 52px); color: #d4d4d0; }
 .landing-links a, .landing-footer a { transition: color .18s ease; }
-.landing-links a:hover, .landing-footer a:hover { color: var(--land-accent); }
+.landing-links a:hover { color: #f8f6e3; }
+.landing-footer a:hover { color: var(--land-accent); }
 .landing-nav-actions { justify-self: end; display: flex; align-items: center; gap: 12px; }
 .landing-nav-actions button, .mobile-menu { border: 0; cursor: pointer; }
 .nav-login { padding: 10px 20px; border: 1px solid rgba(255,255,255,.22)!important; border-radius: 13px; background: transparent; color: var(--land-text); }

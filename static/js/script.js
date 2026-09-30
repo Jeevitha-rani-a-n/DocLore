@@ -14,6 +14,9 @@ let conversations = [];
 let selectedConversationId = null;
 let busy = false;
 let allHandbooksSelected = true;
+let multipleHandbooksSelected = false;
+let selectedHandbookIds = [];
+let handbookMenuOpen = false;
 let zoom = 100;
 let sidebarVisible = true;
 let documentVisible = true;
@@ -216,7 +219,7 @@ function renderConversations() {
     const visible = conversations.filter((item) => {
         const messageText = item.messages.map((message) => message.text).join(" ");
         const label = `${item.title} ${item.documentName || ""} ${messageText}`.toLowerCase();
-        return label.includes(search) && (handbook === "all" || item.documentId === handbook);
+        return label.includes(search) && (handbook === "all" || item.documentId === handbook || item.documentIds?.includes(handbook));
     });
 
     const appendGroup = (root, items, emptyText) => {
@@ -249,6 +252,9 @@ function renderConversations() {
             button.addEventListener("click", () => {
                 selectedConversationId = conversation.id;
                 allHandbooksSelected = Boolean(conversation.allDocuments);
+                multipleHandbooksSelected = !conversation.allDocuments && Boolean(conversation.documentIds?.length);
+                selectedHandbookIds = conversation.documentIds || [];
+                handbookMenuOpen = false;
                 $("#handbookFilter").value = conversation.allDocuments ? "all" : (conversation.documentId || "all");
                 if (documents.some((doc) => doc.id === conversation.documentId)) selectDocument(conversation.documentId);
                 else renderAll();
@@ -291,6 +297,60 @@ function renderConversations() {
     filter.replaceChildren(new Option("All handbooks", "all"));
     knownDocuments.forEach(([id, name]) => filter.add(new Option(name, id)));
     if (knownDocuments.some(([id]) => id === previous)) filter.value = previous;
+
+    const multiList = $("#multiHandbookList");
+    multiList.hidden = !handbookMenuOpen;
+    $("#handbookPickerButton").setAttribute("aria-expanded", String(handbookMenuOpen));
+    const selectedNames = selectedHandbookIds.map((id) => documents.find((doc) => doc.id === id)?.filename).filter(Boolean);
+    $("#handbookPickerButton").innerHTML = selectedNames.length
+        ? `${selectedNames.length} handbook${selectedNames.length === 1 ? "" : "s"} selected <span aria-hidden="true">▾</span>`
+        : `All handbooks <span aria-hidden="true">▾</span>`;
+    multiList.replaceChildren();
+    documents.forEach((doc) => {
+        const label = document.createElement("label");
+        label.className = "multi-handbook-option";
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = doc.id;
+        checkbox.checked = selectedHandbookIds.includes(doc.id);
+        checkbox.addEventListener("change", () => {
+            selectedHandbookIds = [...multiList.querySelectorAll("input:checked")].map((input) => input.value);
+            allHandbooksSelected = false;
+            if (selectedHandbookIds.length) {
+                multipleHandbooksSelected = true;
+                allHandbooksSelected = false;
+                createConversationForHandbooks(selectedHandbookIds);
+            } else {
+                multipleHandbooksSelected = false;
+                allHandbooksSelected = true;
+                selectedConversationId = null;
+                renderAll();
+            }
+        });
+        const name = document.createElement("span");
+        name.textContent = doc.filename;
+        label.append(checkbox, name);
+        multiList.append(label);
+    });
+    const selectAll = document.createElement("button");
+    selectAll.type = "button";
+    selectAll.className = "multi-handbook-select-all";
+    selectAll.textContent = selectedHandbookIds.length === documents.length && documents.length
+        ? "Clear selection"
+        : "Select all";
+    selectAll.addEventListener("click", () => {
+        const selectingAll = selectedHandbookIds.length !== documents.length;
+        selectedHandbookIds = selectingAll ? documents.map((doc) => doc.id) : [];
+        multipleHandbooksSelected = selectingAll;
+        allHandbooksSelected = !selectingAll;
+        handbookMenuOpen = true;
+        if (selectingAll) createConversationForHandbooks(selectedHandbookIds);
+        else {
+            selectedConversationId = null;
+            renderAll();
+        }
+    });
+    multiList.append(selectAll);
 
     const quick = $("#quickHandbooks");
     quick.replaceChildren();
@@ -378,7 +438,15 @@ function createCopyButton(text, label, successMessage) {
     return button;
 }
 
-function createMessage(role, text, sources = [], isThinking = false, createdAt = Date.now(), timings = null, answerInfo = null, citedDocumentId = null) {
+function createMessage(role, text, sources = [], isThinking = false, createdAt = Date.now(), timings = null, answerInfo = null, citedDocumentId = null, conflictText = null) {
+    if (role === "assistant" && !conflictText && text) {
+        const marker = /Conflict detected\s*:/i.exec(text);
+        if (marker) {
+            const lineStart = text.lastIndexOf("\n", marker.index) + 1;
+            conflictText = text.slice(marker.index + marker[0].length).trim();
+            text = text.slice(0, lineStart).trim();
+        }
+    }
     const row = document.createElement("article");
     row.className = `message-row ${role === "user" ? "user-row" : "assistant-row"}${isThinking ? " thinking-row" : ""}`;
     const avatar = document.createElement("div");
@@ -408,6 +476,24 @@ function createMessage(role, text, sources = [], isThinking = false, createdAt =
         bubble.textContent = text;
     }
     content.append(meta, bubble);
+    if (role === "assistant" && !isThinking && conflictText) {
+        const conflictBox = document.createElement("aside");
+        conflictBox.className = "conflict-warning-box";
+        conflictBox.setAttribute("role", "alert");
+        const conflictHeading = document.createElement("strong");
+        conflictHeading.className = "conflict-warning-heading";
+        conflictHeading.textContent = "⚠️ Conflict detected";
+        const conflictBody = document.createElement("div");
+        conflictBody.className = "conflict-warning-content markdown";
+        const cleanDetails = conflictText.replace(/^\s*(?:This contradicts an older version\.?\s*)?/i, "");
+        if (window.marked && window.DOMPurify) {
+            conflictBody.innerHTML = window.DOMPurify.sanitize(window.marked.parse(cleanDetails, { breaks: true }));
+        } else {
+            conflictBody.textContent = cleanDetails;
+        }
+        conflictBox.append(conflictHeading, conflictBody);
+        bubble.append(conflictBox);
+    }
 
     if ((role === "assistant" || role === "user") && !isThinking) {
         const tools = document.createElement("div");
@@ -500,7 +586,7 @@ function renderMessages() {
         chatBox.append(welcome);
         return;
     }
-    conversation.messages.forEach((message) => chatBox.append(createMessage(message.role, message.text, message.sources || [], false, message.time, message.timings || null, message.answerInfo || null, message.documentId || conversation.documentId)));
+    conversation.messages.forEach((message) => chatBox.append(createMessage(message.role, message.text, message.sources || [], false, message.time, message.timings || null, message.answerInfo || null, message.documentId || conversation.documentId, message.conflict || null)));
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
@@ -627,6 +713,9 @@ function ensureConversationForAllDocuments() {
 }
 
 function handleHandbookFilterChange() {
+    multipleHandbooksSelected = false;
+    selectedHandbookIds = [];
+    handbookMenuOpen = false;
     const documentId = $("#handbookFilter").value;
     if (documentId === "all") {
         allHandbooksSelected = true;
@@ -649,6 +738,27 @@ function handleHandbookFilterChange() {
 
     selectDocument(documentId);
     ensureConversationFor(documentId);
+    questionInput.focus();
+}
+
+function createConversationForHandbooks(documentIds) {
+    const ids = [...new Set(documentIds)];
+    if (!ids.length) return;
+    const names = ids.map((id) => documents.find((doc) => doc.id === id)?.filename).filter(Boolean);
+    let conversation = conversations.find((item) => !item.messages.length
+        && !item.allDocuments && JSON.stringify([...(item.documentIds || [])].sort()) === JSON.stringify([...ids].sort()));
+    if (!conversation) {
+        conversation = {
+            id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+            title: "New conversation", documentId: null, documentIds: ids,
+            documentName: names.join(", "), updatedAt: Date.now(), messages: [], allDocuments: false
+        };
+        conversations.push(conversation);
+    }
+    selectedConversationId = conversation.id;
+    selectedHandbookIds = ids;
+    multipleHandbooksSelected = true;
+    renderAll();
     questionInput.focus();
 }
 
@@ -717,12 +827,48 @@ async function uploadSelectedPdf() {
     $(".prompt-composer").classList.add("has-document");
     $("#composerDocumentName").textContent = file.name;
     $("#composerDocumentStatus").textContent = "Uploading and indexing your PDF...";
+    const uploadStatus = $("#handbookUploadStatus");
+    const uploadName = $("#handbookUploadName");
+    const uploadPercent = $("#handbookUploadPercent");
+    let currentUploadPercent = 0;
+    uploadName.textContent = `Uploading ${file.name}`;
+    uploadPercent.textContent = "0%";
+    uploadStatus.hidden = false;
     const body = new FormData();
     body.append("pdf", file);
     try {
-        const response = await fetch("/upload", { method: "POST", body });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Upload failed.");
+        const uploadResponse = await new Promise((resolve, reject) => {
+            const request = new XMLHttpRequest();
+            request.open("POST", "/upload");
+            request.upload.addEventListener("progress", (event) => {
+                if (!event.lengthComputable) return;
+                currentUploadPercent = Math.min(100, Math.round((event.loaded / event.total) * 100));
+                uploadName.textContent = `Uploading ${file.name}`;
+                uploadPercent.textContent = `${currentUploadPercent}%`;
+            });
+            request.addEventListener("load", () => {
+                let responseData = {};
+                try { responseData = JSON.parse(request.responseText || "{}"); }
+                catch { reject(new Error("The server returned an invalid upload response.")); return; }
+                if (request.status >= 200 && request.status < 300) resolve(responseData);
+                else reject(new Error(responseData.error || "Upload failed."));
+            });
+            request.addEventListener("error", () => reject(new Error("Upload failed. Check your connection and try again.")));
+            request.addEventListener("abort", () => reject(new Error("Upload was cancelled.")));
+            request.send(body);
+        });
+        let data = uploadResponse;
+        if (uploadResponse.job_id) {
+            uploadName.textContent = `Indexing ${uploadResponse.filename || file.name}`;
+            uploadPercent.textContent = "0%";
+            data = await waitForIndexing(uploadResponse.job_id, file.name, (progress, stage) => {
+                currentUploadPercent = progress;
+                uploadName.textContent = `${stage}: ${file.name}`;
+                uploadPercent.textContent = `${progress}%`;
+            });
+        }
+        currentUploadPercent = 100;
+        uploadStatus.hidden = true;
         const uploadedDocument = { ...data, url: data.document_url };
         documents.unshift(uploadedDocument);
         allHandbooksSelected = false;
@@ -736,12 +882,27 @@ async function uploadSelectedPdf() {
         newConversation();
         toast("PDF uploaded and indexed.");
     } catch (error) {
+        uploadName.textContent = `Upload failed: ${file.name}`;
+        uploadPercent.textContent = `${currentUploadPercent}%`;
+        uploadStatus.hidden = true;
         $("#documentReadyBadge").textContent = documentInfo ? "Previous document" : "Upload failed";
         toast(error.message || "Upload failed.", true);
     } finally {
         pdfInput.value = "";
         busy = false;
         syncComposer();
+    }
+}
+
+async function waitForIndexing(jobId, filename, onProgress) {
+    while (true) {
+        await new Promise((resolve) => window.setTimeout(resolve, 350));
+        const response = await fetch(`/upload/status/${encodeURIComponent(jobId)}`);
+        const status = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(status.error || `Could not check indexing status for ${filename}.`);
+        onProgress(Number(status.progress) || 0, status.stage || "Indexing");
+        if (status.status === "complete") return status.document;
+        if (status.status === "failed") throw new Error(status.error || `Could not index ${filename}.`);
     }
 }
 
@@ -756,7 +917,10 @@ async function submitQuestion(event) {
     const question = questionInput.value.trim();
     let conversation = currentConversation();
     if (!question || busy) return;
+    const selectedIds = conversation?.documentIds?.length ? conversation.documentIds : selectedHandbookIds;
     const searchAllDocuments = allHandbooksSelected || Boolean(conversation?.allDocuments);
+    const searchSelectedDocuments = !searchAllDocuments && selectedIds.length > 0
+        && (multipleHandbooksSelected || Boolean(conversation?.documentIds?.length));
     if (searchAllDocuments) {
         if (!documents.length) {
             toast("Upload at least one handbook before asking a question.", true);
@@ -767,10 +931,16 @@ async function submitQuestion(event) {
             ensureConversationForAllDocuments();
             conversation = currentConversation();
         }
-    } else if (!documentInfo) {
+    } else if (multipleHandbooksSelected && !selectedIds.length) {
+        toast("Select at least one handbook from the checkbox list.", true);
+        return;
+    } else if (!searchSelectedDocuments && !documentInfo) {
         toast("Upload a PDF first. Your question is still in the prompt.", true);
         return;
-    } else if (!conversation || conversation.documentId !== documentInfo.id) {
+    } else if (searchSelectedDocuments && (!conversation || JSON.stringify([...(conversation.documentIds || [])].sort()) !== JSON.stringify([...selectedIds].sort()))) {
+        createConversationForHandbooks(selectedIds);
+        conversation = currentConversation();
+    } else if (!searchSelectedDocuments && (!conversation || conversation.documentId !== documentInfo.id)) {
         ensureConversationFor(documentInfo.id);
         conversation = currentConversation();
     }
@@ -789,13 +959,14 @@ async function submitQuestion(event) {
         const response = await fetch("/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ question, document_id: conversation.documentId, all_documents: Boolean(conversation.allDocuments) })
+            body: JSON.stringify({ question, document_id: conversation.documentId, document_ids: conversation.documentIds || [], all_documents: Boolean(conversation.allDocuments) })
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "The question could not be answered.");
         conversation.messages.push({
             role: "assistant",
             text: data.answer,
+            conflict: data.conflict || null,
             sources: data.sources || [],
             timings: data.timings || null,
             answerInfo: data.answer_info || null,
@@ -847,6 +1018,16 @@ $("#newChatBottomBtn").addEventListener("click", newConversation);
 $("#clearConversationBtn").addEventListener("click", clearCurrentConversation);
 $("#historySearch").addEventListener("input", renderConversations);
 $("#handbookFilter").addEventListener("change", handleHandbookFilterChange);
+$("#handbookPickerButton").addEventListener("click", () => {
+    handbookMenuOpen = !handbookMenuOpen;
+    renderConversations();
+});
+document.addEventListener("click", (event) => {
+    if (handbookMenuOpen && !event.target.closest(".handbook-picker")) {
+        handbookMenuOpen = false;
+        renderConversations();
+    }
+});
 $("#documentDetailsBtn").addEventListener("click", () => {
     if (!documentInfo) return toast("Upload a PDF to view its details.", true);
     $("#documentDetails").classList.toggle("hidden");
@@ -925,11 +1106,18 @@ fetch("/documents")
         documents = (data.documents || []).map((doc) => ({ ...doc, url: doc.document_url }));
         if (documents.length) {
             const saved = currentConversation();
-            const preferred = saved && !saved.allDocuments && documents.some((doc) => doc.id === saved.documentId)
+            const preferred = saved?.documentIds?.length && documents.some((doc) => doc.id === saved.documentIds[0])
+                ? saved.documentIds[0]
+                : saved && !saved.allDocuments && documents.some((doc) => doc.id === saved.documentId)
                 ? saved.documentId
                 : documents[0].id;
             selectDocument(preferred);
-            if (saved?.allDocuments) {
+            if (saved?.documentIds?.length) {
+                allHandbooksSelected = false;
+                multipleHandbooksSelected = true;
+                selectedHandbookIds = saved.documentIds.filter((id) => documents.some((doc) => doc.id === id));
+                renderAll();
+            } else if (saved?.allDocuments) {
                 allHandbooksSelected = true;
                 $("#handbookFilter").value = "all";
                 renderAll();

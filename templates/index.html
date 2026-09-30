@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}?v=frontend-2">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}?v=upload-progress-2">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}?v=profile-1">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/click-effects.css') }}?v=1">
 </head>
@@ -40,8 +40,13 @@
             <section class="sidebar-section filter-section">
                 <div class="section-heading"><h2>Conversation history</h2><span class="live-dot" title="Saved in this browser"></span></div>
                 <label class="search-box"><span aria-hidden="true">⌕</span><input id="historySearch" type="search" placeholder="Search conversations…" aria-label="Search conversations"></label>
-                <label class="select-label" for="handbookFilter">Filter by handbook</label>
-                <select id="handbookFilter" aria-label="Filter by handbook"><option value="all">All handbooks</option></select>
+                <label class="select-label" for="handbookPickerButton">Answer from handbooks</label>
+                <div class="handbook-picker">
+                    <button id="handbookPickerButton" class="handbook-picker-button" type="button" aria-expanded="false" aria-controls="multiHandbookList">All handbooks <span aria-hidden="true">▾</span></button>
+                    <div id="multiHandbookList" class="multi-handbook-list" hidden aria-label="Choose handbooks for answers"></div>
+                </div>
+                <p id="handbookUploadStatus" class="handbook-upload-status" hidden aria-live="polite"><span id="handbookUploadName"></span><strong id="handbookUploadPercent"></strong></p>
+                <select id="handbookFilter" aria-label="Filter conversation history by handbook" hidden><option value="all">All handbooks</option></select>
             </section>
 
             <section class="sidebar-section conversation-section">
@@ -142,6 +147,6 @@
     <script src="{{ url_for('static', filename='js/sound-toggle.js') }}?v=1" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js" defer></script>
-    <script src="{{ url_for('static', filename='js/script.js') }}?v=chat-pop-sound-1" defer></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}?v=upload-progress-2" defer></script>
 </body>
 </html>

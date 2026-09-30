@@ -100,6 +100,19 @@ button { color: inherit; cursor: pointer; }
 .select-label { display: block; margin: 10px 0 5px; font-size: 12px; }
 #handbookFilter { width: 100%; min-height: 40px; padding: 0 34px 0 10px; border: 0; border-radius: 6px; background-color: var(--primary); color: var(--primary-foreground); appearance: none; background-image: url("../icons/dropdown-icon.png"); background-repeat: no-repeat; background-position: right 8px center; background-size: 22px; }
 #handbookFilter option { background: var(--primary); color: var(--primary-foreground); }
+.handbook-picker { position: relative; }
+.handbook-picker-button { display: flex; width: 100%; min-height: 40px; align-items: center; justify-content: space-between; padding: 0 10px; border: 0; border-radius: 6px; background: var(--primary); color: var(--primary-foreground); text-align: left; font-size: 12px; }
+.multi-handbook-list { position: absolute; z-index: 25; inset: calc(100% + 4px) 0 auto; display: grid; gap: 4px; max-height: 220px; padding: 7px; overflow-y: auto; border: 1px solid var(--soft-line); border-radius: 6px; background: var(--secondary); box-shadow: 0 12px 24px rgba(0,0,0,.28); }
+.multi-handbook-list[hidden] { display: none; }
+.multi-handbook-option { display: flex; align-items: center; gap: 7px; min-width: 0; color: var(--foreground); font-size: 11px; cursor: pointer; }
+.multi-handbook-option input { accent-color: var(--ring); }
+.multi-handbook-select-all { justify-self: end; margin-top: 4px; padding: 5px 9px; border: 1px solid var(--ring); border-radius: 5px; background: var(--primary); color: var(--primary-foreground); font-size: 11px; font-weight: 600; }
+.multi-handbook-select-all:hover { background: var(--ring); color: var(--primary-foreground); }
+.handbook-upload-status { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 1px 0; color: var(--muted-foreground); font-size: 10px; line-height: 1.35; }
+.handbook-upload-status[hidden] { display: none; }
+.handbook-upload-status span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.handbook-upload-status strong { flex: 0 0 auto; color: var(--primary); font-size: 10px; font-weight: 700; }
+.multi-handbook-option span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .muted-label { color: var(--muted-foreground); font-size: 11px; white-space: nowrap; }
 .conversation-list { display: grid; gap: 4px; }
 .conversation-entry { display: flex; align-items: center; gap: 2px; width: 100%; min-width: 0; }
@@ -163,6 +176,11 @@ button { color: inherit; cursor: pointer; }
 .user-row .message-bubble { padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px 3px 8px 8px; background: var(--secondary); }
 .assistant-row .message-bubble { position: relative; padding: 10px 12px; border: 1px solid var(--border); border-radius: 3px 8px 8px 8px; background: var(--wash); white-space: pre-wrap; }
 .assistant-row .message-bubble.markdown { white-space: normal; }
+.conflict-warning-box { display: block; margin-top: 12px; padding: 10px 12px; border: 2px solid var(--destructive); border-left-width: 6px; border-radius: 7px; background: var(--secondary); color: var(--foreground); }
+.conflict-warning-heading { display: block; margin-bottom: 5px; color: var(--destructive); font-size: 12px; }
+.conflict-warning-content { font-size: 12px; line-height: 1.5; }
+.conflict-warning-content > :first-child { margin-top: 0; }
+.conflict-warning-content > :last-child { margin-bottom: 0; }
 .markdown > :first-child { margin-top: 0; }
 .markdown > :last-child { margin-bottom: 0; }
 .markdown p { margin: 0 0 .65em; }
